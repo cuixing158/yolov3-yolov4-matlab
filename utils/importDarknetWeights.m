@@ -1,42 +1,49 @@
-function [net,hyperParams,numsNetParams,FLOPs] = importDarknetNetwork(cfgfile,weightsfile)
-% IMPORTDARKNETNETWORK ¹¦ÄÜ£ºµ¼ÈëÖ¸¶¨µÄcfgfile£¬weightsfileµ½matlabÖĞ
-% ÊäÈë£ºcfgfile, Ö¸¶¨µÄcfgºó×ºµÄÄ£ĞÍÃèÊöÎÄ¼ş£¬Ä¿Ç°Ö»Ö§³Öseries network»òÕßDAGnetwork
-%       weighfile, Ö¸¶¨µÄ.weightsºó×ºµÄ¶ş½øÖÆÎÄ¼ş£¬Ä¿Ç°Ö»Ö§³Öseries network»òÕßDAGnetwork
-% Êä³ö£ºnet£¬ matlabÉî¶ÈÑ§Ï°Ä£ĞÍ£¬Ä¿Ç°Ö»Ö§³Öseries network»òÕßDAGnetwork
-%      hyperParams,½á¹¹Ìå£¬³¬²ÎÅäÖÃÎÄ¼ş
-%      numsReadParams,È¨ÖØ²ÎÊı¸öÊı
-%      FLOPs£¬ Ä£ĞÍ¼ÆËãÁ¦
-% ×¢Òâ£º1¡¢ÊÊºÏ2019a°æ±¾¼°ÒÔÉÏ
-%       2¡¢leakyãĞÖµÄ¿Ç°È¡µÄ0.1
-%       3¡¢Èç¹ûÄ³¸ömoduleÖĞÓĞbn²ã£¬ÔòconvµÄbiasÎª0£¬ÒòÎªdarknetÊÇÕâÖÖ´æ´¢ĞÎÊ½
-%      4¡¢µ±¶ÁÈëµ½yolo²ã£¬ÍË³öµ¼Èë£¬ÔİÊ±²»Ö§³Öyolo¼°ºóÃæµÄ²ã£¬ÒòÎªyolov3¹Ù·½»¹²»Ö§³Ö
-%      5¡¢darknet weights±£´æË³ĞòÒÀ´ÎÎªBN²ãoffset,scale,mean,variance,Conv²ãµÄbias,weights
-%      ÌØÕ÷Í¼Êä³öoutput Size = (Input Size ¨C ((Filter Size ¨C 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
-% ²Î¿¼£º1¡¢¹Ù·½ÎÄµµ£¬Specify Layers of Convolutional Neural Network
-%      2¡¢https://www.zhihu.com/question/65305385
-%       3¡¢https://github.com/ultralytics/yolov3/blob/master/models.py
+function [lgraph,hyperParams,numsNetParams,FLOPs] = importDarknetWeights(cfgfile,weightsfile,cutoffModule)
+% IMPORTDARKNETWEIGHTS åŠŸèƒ½ï¼šæŒ‡å®šå¯¼å…¥éƒ¨åˆ†moduleçš„darknetæ¨¡å‹
+% è¾“å…¥ï¼šcfgfile, æŒ‡å®šçš„cfgåç¼€çš„æ¨¡å‹æè¿°æ–‡ä»¶
+%       weighfile, æŒ‡å®šçš„.weightsåç¼€çš„äºŒè¿›åˆ¶æ–‡ä»¶
+%       cutoffModule,(å¯é€‰é¡¹)1*1çš„æ­£æ•´æ•°ï¼Œ(å¯é€‰é¡¹)1*1çš„æ­£æ•´æ•°ï¼ŒæŒ‡å®šå¯¼å‡ºdarknetå‰cutoffModuleä¸ªmoduleã€‚ä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°ï¼Œæ²¡æœ‰è¯¥é¡¹åˆ™å¯¼å‡ºæ•´ä¸ªç½‘ç»œ
+% è¾“å‡ºï¼šlgraphï¼Œ matlabæ·±åº¦å­¦ä¹ æ¨¡å‹è®¡ç®—å›¾
+%      hyperParams,ç»“æ„ä½“ï¼Œè¶…å‚é…ç½®æ–‡ä»¶
+%      numsReadParams,æƒé‡å‚æ•°ä¸ªæ•°
+%      FLOPsï¼Œ æ¨¡å‹è®¡ç®—åŠ›
+% æ³¨æ„ï¼š1ã€é€‚åˆ2019bç‰ˆæœ¬åŠä»¥ä¸Š
+%       2ã€leakyé˜ˆå€¼ä¸º0.1
+%       3ã€å¦‚æœæŸä¸ªmoduleä¸­æœ‰bnå±‚ï¼Œåˆ™convçš„biasä¸º0ï¼Œå› ä¸ºdarknetæ˜¯è¿™ç§å­˜å‚¨å½¢å¼
+%       4ã€darknet weightsä¿å­˜é¡ºåºä¾æ¬¡ä¸ºBNå±‚offset,scale,mean,variance,Convå±‚çš„bias,weights
+%      ç‰¹å¾å›¾è¾“å‡ºoutput Size = (Input Size â€“ ((Filter Size â€“ 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
+% å‚è€ƒï¼š1ã€å®˜æ–¹æ–‡æ¡£ï¼ŒSpecify Layers of Convolutional Neural Network
+%      2ã€https://www.zhihu.com/question/65305385
+%       3ã€https://github.com/ultralytics/yolov3/blob/master/models.py
 % cuixingxing150@gmail.com
 % 2019.8.19
+% 2019.9.4ä¿®æ”¹ï¼Œç”±åŸæ¥çš„darknetä¸­[net]ä¸º0å¼€å§‹çš„ç´¢å¼•æ”¹ä¸ºä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°çš„ç´¢å¼•
+% 2020.4.25ä¿®æ”¹å‡½æ•°é»˜è®¤è¾“å…¥å‚æ•°
 %
-
+arguments
+    cfgfile (1,:) char
+    weightsfile (1,:) char
+    cutoffModule {mustBeNonnegative} = 0 % é»˜è®¤å¯¼å…¥æ‰€æœ‰çš„å±‚
+end
+    
 [lgraph,hyperParams,numsNetParams,FLOPs,...
-    moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile);
+    moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile,cutoffModule);
 assert(length(moduleTypeList)==length(moduleInfoList));
 
-%% ¶ÁÈ¡È¨ÖØ²ÎÊıÎÄ¼ş
+%% è¯»å–æƒé‡å‚æ•°æ–‡ä»¶
 fid_w = fopen(weightsfile,'rb');
 header = fread(fid_w, 3, '*int32');
 if header(2) > 1
-    header2 = fread(fid_w, 1, '*int64'); % int64Õ¼ÓÃ8¸ö×Ö½Ú
+    header2 = fread(fid_w, 1, '*int64'); % int64å ç”¨8ä¸ªå­—èŠ‚
 else
-    header2 = fread(fid_w, 1, '*int32'); % int32Õ¼ÓÃ4¸ö×Ö½Ú
+    header2 = fread(fid_w, 1, '*int32'); % int32å ç”¨4ä¸ªå­—èŠ‚
 end
 fprintf('Major :%d, Minor :%d,Revision :%d,number of images during training:%d,reading params...\n',...
     header(1),header(2),header(3),header2);
 weights = fread(fid_w,'*single');
 fclose(fid_w);
 
-numsWeightsParams = numel(weights);
+% numsWeightsParams = numel(weights);
 readSize = 1;
 numsModule = length(moduleTypeList);
 
@@ -69,11 +76,11 @@ for i = 1:numsModule
             bn_var = weights(readSize:readSize+numFilters-1);
             bn_var = reshape(bn_var,[1,1,numFilters]);
             if any(bn_var<-0.01)
-                error("·½²îÓ¦¸Ã´óÓÚ0£¡");
+                error("æ–¹å·®åº”è¯¥å¤§äº0ï¼");
             end
-            currentModule(2).TrainedVariance = abs(bn_var); % ·ÀÖ¹½Ó½üÓÚ0µÄÊıÊÇ¸ºÊı
+            currentModule(2).TrainedVariance = abs(bn_var); % é˜²æ­¢æ¥è¿‘äº0çš„æ•°æ˜¯è´Ÿæ•°
             readSize = readSize+numFilters;
-            % conv bias Îª0
+            % conv bias ä¸º0
             if isfield(currentModuleInfo,'groups')
                 numGroups = str2double(currentModuleInfo.groups);
                 numFiltersPerGroup_out = numFilters/numGroups;
@@ -112,7 +119,7 @@ for i = 1:numsModule
             currentModule(1).Weights = conv_weights;
             readSize = readSize+nums_conv_w;
         end % end of load conv weights  
-        % ¸üĞÂ²ÎÊı
+        % æ›´æ–°å‚æ•°
         % lgraph.Layers(i==layerToModuleIndex) = currentModule;
         for replaceInd = 1:length(currentModule)
             layerName = currentModule(replaceInd).Name;
@@ -135,10 +142,10 @@ for i = 1:numsModule
         numWeights = numFilters*input_all_neurons; % help fullyConnectedLayer weights
         fl_weights = weights(readSize:readSize+numWeights-1);
         fl_weights = reshape(fl_weights,input_all_neurons,numFilters);
-        fl_weights = permute(fl_weights,[2,1]);% fc²»ĞèÒªpermute?
+        fl_weights = permute(fl_weights,[2,1]);% fcä¸éœ€è¦permute?
         currentModule(1).Weights = fl_weights;
         readSize = readSize+numWeights;
-        % ¸üĞÂ²ÎÊı
+        % æ›´æ–°å‚æ•°
         for replaceInd = 1:length(currentModule)
             layerName = currentModule(replaceInd).Name;
             lgraph = replaceLayer(lgraph,layerName,currentModule(replaceInd));
@@ -153,8 +160,5 @@ if isa(lgraph.Layers(end),'nnet.cnn.layer.SoftmaxLayer')
     lgraph = connectLayers(lgraph,lastLayerName,'classify');
 end
 
-assert(readSize-1==numsWeightsParams);
-fprintf('Load parameters succfully! now start to assemble Network...\n')
-warning('off');
-net = assembleNetwork(lgraph);
-fprintf('Assemble Network succfully!\n')
+fprintf('Load parameters succfully!\n')
+

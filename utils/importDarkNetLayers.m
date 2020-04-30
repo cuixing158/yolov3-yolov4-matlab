@@ -1,39 +1,42 @@
-function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile,varargin)
-% importDarkNetLayers ¹¦ÄÜ£º°ÑdarknetµÄcfgfileµ¼³öÎªmatlabµÄlgraph
-% ÊäÈë£ºcfgfile, (±ØÑ¡Ïî)×Ö·ûÏòÁ¿£¬Ö¸¶¨µÄcfgºó×ºµÄÄ£ĞÍÃèÊöÎÄ¼şÃû×Ö
-%      cutoffModule,(¿ÉÑ¡Ïî)1*1µÄÕıÕûÊı£¬Ö¸¶¨µ¼ÈëdarknetÇ°cutoffModule¸ömodule¡£ÒÔcfgÎÄ¼şÖĞµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0¿ªÊ¼µÄ¼ÆÊı£¬Ã»ÓĞ¸ÃÏîÊäÈëÔòµ¼³öÕû¸öÍøÂç
-% Êä³ö£ºlgraph£¬ matlabÉî¶ÈÑ§Ï°Ä£ĞÍÍ¼£¬Ä¿Ç°Ö»Ö§³Öseries network»òÕßDAGnetwork
-%      hyperParams,½á¹¹Ìå£¬³¬²ÎÅäÖÃÎÄ¼ş
-%      numsNetParams,È¨ÖØ²ÎÊı¸öÊı
-%      FLOPs£¬ Ä£ĞÍ¼ÆËãÁ¦
-%      moduleTypeList,cell arrayÀàĞÍ£¬ÀïÃæÃ¿¸ö×Ö·ûÏòÁ¿´æ´¢moduleµÄÀàĞÍ
-%      moduleInfoList£¬cell arrayÀàĞÍ£¬ÀïÃæÃ¿¸östruct´æ´¢moduleµÄĞÅÏ¢£¬ ³ıÁËÀïÃæÃ¿¸ö½á¹¹Ìå´æ´¢cfgÖĞµÄÄÚÈİÍâ£¬»¹±ØĞë´æ´¢channels£¬mapsizeÁ½¸öÊôĞÔ
+function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile,cutoffModule)
+% importDarkNetLayers åŠŸèƒ½ï¼šæŠŠdarknetçš„cfgfileå¯¼å‡ºä¸ºmatlabçš„lgraph
+% è¾“å…¥ï¼šcfgfile, (å¿…é€‰é¡¹)å­—ç¬¦å‘é‡ï¼ŒæŒ‡å®šçš„cfgåç¼€çš„æ¨¡å‹æè¿°æ–‡ä»¶åå­—
+%      cutoffModule,(å¯é€‰é¡¹)1*1çš„æ­£æ•´æ•°ï¼ŒæŒ‡å®šå¯¼å…¥darknetå‰cutoffModuleä¸ªmoduleã€‚ä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°ï¼Œæ²¡æœ‰è¯¥é¡¹è¾“å…¥åˆ™å¯¼å‡ºæ•´ä¸ªç½‘ç»œ
+% è¾“å‡ºï¼šlgraphï¼Œ matlabæ·±åº¦å­¦ä¹ æ¨¡å‹å›¾
+%      hyperParams,ç»“æ„ä½“ï¼Œè¶…å‚é…ç½®æ–‡ä»¶
+%      numsNetParams,æƒé‡å‚æ•°ä¸ªæ•°
+%      FLOPsï¼Œ æ¨¡å‹è®¡ç®—åŠ›
+%      moduleTypeList,cell arrayç±»å‹ï¼Œé‡Œé¢æ¯ä¸ªå­—ç¬¦å‘é‡å­˜å‚¨moduleçš„ç±»å‹
+%      moduleInfoListï¼Œcell arrayç±»å‹ï¼Œé‡Œé¢æ¯ä¸ªstructå­˜å‚¨moduleçš„ä¿¡æ¯ï¼Œ é™¤äº†é‡Œé¢æ¯ä¸ªç»“æ„ä½“å­˜å‚¨cfgä¸­çš„å†…å®¹å¤–ï¼Œè¿˜å¿…é¡»å­˜å‚¨channelsï¼Œmapsizeä¸¤ä¸ªå±æ€§
 %      layerToModuleIndex,
-%      n*1µÄÏòÁ¿Êı×é£¬lgraphÖĞLayers¹éÎªmoduleµÄË÷Òı£¬´Ó1¿ªÊ¼£¬nÎªLayersµÄ³¤¶È´óĞ¡
-% ×¢Òâ£º1¡¢ÊÊºÏ2019a°æ±¾¼°ÒÔÉÏ
-%      2¡¢leakyãĞÖµÄ¿Ç°È¡µÄ0.1
-%      3¡¢Èç¹ûÄ³¸ömoduleÖĞÓĞbn²ã£¬ÔòconvµÄbiasÎª0£¬ÒòÎªdarknetÊÇÕâÖÖ´æ´¢ĞÎÊ½
-%      4¡¢µ±¶ÁÈëµ½yolo²ã£¬ÍË³öµ¼Èë£¬ÔİÊ±²»Ö§³Öyolo¼°ºóÃæµÄ²ã£¬ÒòÎªyolov3¹Ù·½»¹²»Ö§³Ö
-%      5¡¢shortcutºÍrouteÖ»Ö§³ÖÊäÈë½ÚµãÊı²»¸ßÓÚ2¸ö£¬ÇÒÆäÖĞÒ»¸ö·ÖÖ§ÏßÂ·Ã»ÓĞlayer
-%      6¡¢darknet weights±£´æË³ĞòÒÀ´ÎÎªBN²ãoffset,scale,mean,variance,Conv²ãµÄbias,weights
-%      ÌØÕ÷Í¼Êä³öoutput Size = (Input Size ¨C ((Filter Size ¨C 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
-% ²Î¿¼£º1¡¢¹Ù·½ÎÄµµ£¬Specify Layers of Convolutional Neural Network
-%      2¡¢https://www.zhihu.com/question/65305385
-%       3¡¢https://github.com/ultralytics/yolov3/blob/master/models.py
+%      n*1çš„å‘é‡æ•°ç»„ï¼Œlgraphä¸­Layerså½’ä¸ºmoduleçš„ç´¢å¼•ï¼Œä»1å¼€å§‹ï¼Œnä¸ºLayersçš„é•¿åº¦å¤§å°
+% æ³¨æ„ï¼š1ã€é€‚åˆ2019bç‰ˆæœ¬åŠä»¥ä¸Š
+%      2ã€leakyé˜ˆå€¼darknetä¸º0.1
+%      3ã€å¦‚æœæŸä¸ªmoduleä¸­æœ‰bnå±‚ï¼Œåˆ™convçš„biasä¸º0ï¼Œå› ä¸ºdarknetæ˜¯è¿™ç§å­˜å‚¨å½¢å¼
+%      4ã€shortcutåªæ”¯æŒè¾“å…¥èŠ‚ç‚¹æ•°ä¸é«˜äº2ä¸ª
+%      5ã€darknet weightsä¿å­˜é¡ºåºä¾æ¬¡ä¸ºBNå±‚offset,scale,mean,variance,Convå±‚çš„bias,weights
+%      ç‰¹å¾å›¾è¾“å‡ºoutput Size = (Input Size â€“ ((Filter Size â€“ 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
+% å‚è€ƒï¼š1ã€å®˜æ–¹æ–‡æ¡£ï¼ŒSpecify Layers of Convolutional Neural Network
+%      2ã€https://www.zhihu.com/question/65305385
+%       3ã€https://github.com/ultralytics/yolov3/blob/master/models.py
 % cuixingxing150@gmail.com
 % 2019.8.19
-% 2019.8.29ĞŞ¸Ä£¬¼ÓÈërelu6Ö§³Ö
-% 2019.9.4ĞŞ¸Ä£¬ÓÉÔ­À´µÄdarknetÖĞ[net]Îª0¿ªÊ¼µÄË÷Òı¸ÄÎªÒÔcfgÎÄ¼şÖĞµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0¿ªÊ¼µÄ¼ÆÊıµÄË÷Òı
+% 2019.8.29ä¿®æ”¹ï¼ŒåŠ å…¥relu6æ”¯æŒ
+% 2019.9.4ä¿®æ”¹ï¼Œç”±åŸæ¥çš„darknetä¸­[net]ä¸º0å¼€å§‹çš„ç´¢å¼•æ”¹ä¸ºä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°çš„ç´¢å¼•
+% 2020.4.25ä¿®æ”¹å‡½æ•°é»˜è®¤è¾“å…¥å‚æ•°ï¼Œempty2dLayeråŠ å…¥å±æ€§
+% 2020.4.29åŠ å…¥[route]å±‚ä¸Šé¢å¤šä¸ªå±‚è¿æ¥è¾“å…¥ï¼Œæ”¯æŒdarknet sppæ¨¡å—
+% 2020.4.29åŠ å…¥mishæ¿€æ´»å‡½æ•°æ”¯æŒ
 %
-minArgs=1;
-maxArgs=2;
-narginchk(minArgs,maxArgs)
-% fprintf('Received 1 required and %d optional inputs\n', length(varargin));
+
+arguments
+    cfgfile (1,:) char
+    cutoffModule {mustBeNonnegative} = 0 % é»˜è®¤å¯¼å…¥æ‰€æœ‰çš„å±‚
+end
 
 %% init
 numsNetParams = 0;FLOPs = 0;
 
-%% ½âÎöÅäÖÃcfgÎÄ¼ş
+%% è§£æé…ç½®cfgæ–‡ä»¶
 fid = fopen(cfgfile,'r');
 cfg = textscan(fid, '%s', 'Delimiter',{'   '});
 fclose(fid);
@@ -41,13 +44,13 @@ cfg = cfg{1};
 TF = startsWith(cfg,'#');
 cfg(TF) = [];
 
-%% ÍøÂçmoduleºÍinfoĞÅÏ¢»ã¼¯
+%% ç½‘ç»œmoduleå’Œinfoä¿¡æ¯æ±‡é›†
 TF_layer = startsWith(cfg,'[');
 moduleTypeList = cfg(TF_layer);
 nums_Module = length(moduleTypeList);
 moduleInfoList = cell(nums_Module,1);%
 
-%% ¶ÁÈ¡²ÎÊıÅäÖÃÎÄ¼ş
+%% è¯»å–å‚æ•°é…ç½®æ–‡ä»¶
 indexs = find(TF_layer);
 for i = 1:nums_Module
     if i == nums_Module
@@ -67,16 +70,16 @@ for i = 1:nums_Module
 end
 
 %% cutoff
-if ~isempty(varargin)
-    cutoffModule = varargin{1};
+if (cutoffModule)
     moduleTypeList(cutoffModule+2:end) = [];
     moduleInfoList(cutoffModule+2:end) = [];
 end
 nums_Module = length(moduleTypeList);
 
-%% ¹¹½¨ÍøÂç½á¹¹Í¼
+%% æ„å»ºç½‘ç»œç»“æ„å›¾
 lgraph = layerGraph();hyperParams = struct();
 moduleLayers = []; lastModuleNames = cell(nums_Module,1);layerToModuleIndex=[];
+yoloIndex = 0;
 for i = 1:nums_Module
     currentModuleType = moduleTypeList{i};
     currentModuleInfo = moduleInfoList{i};
@@ -88,8 +91,8 @@ for i = 1:nums_Module
                 width =  str2double(currentModuleInfo.width);
                 channels = str2double(currentModuleInfo.channels);
                 imageInputSize = [height,width,channels];
-                moduleInfoList{i}.channels = channels; % ·½±ãºóÃæ¼ÆËãÍøÂç²ÎÊı¸öÊı»òÕßFLOPs
-                moduleInfoList{i}.mapSize = [height ,width];% ·½±ã¼ÆËãFLOPsºÍ×îºóÒ»²ã³Ø»¯´óĞ¡
+                moduleInfoList{i}.channels = channels; % æ–¹ä¾¿åé¢è®¡ç®—ç½‘ç»œå‚æ•°ä¸ªæ•°æˆ–è€…FLOPs
+                moduleInfoList{i}.mapSize = [height ,width];% æ–¹ä¾¿è®¡ç®—FLOPså’Œæœ€åä¸€å±‚æ± åŒ–å¤§å°
             else
                 error('[net] require height, width,channels parameters in cfg file!');
             end
@@ -98,9 +101,9 @@ for i = 1:nums_Module
             moduleLayers = input_layer;
             lgraph = addLayers(lgraph,moduleLayers);
         case '[convolutional]'
-            % Ìí¼Óconv²ã
+            % æ·»åŠ convå±‚
             moduleLayers = [];conv_layer = [];bn_layer = [];relu_layer = [];
-            nums_p=numsNetParams;% ¼ÆËãµ±Ç°moduleµÄÈ¨ÖØ¸öÊı
+            nums_p=numsNetParams;% è®¡ç®—å½“å‰moduleçš„æƒé‡ä¸ªæ•°
             filterSize = str2double(currentModuleInfo.size);
             numFilters = str2double(currentModuleInfo.filters);
             stride = str2double(currentModuleInfo.stride);
@@ -131,7 +134,7 @@ for i = 1:nums_Module
                 moduleInfoList{i}.mapSize = floor((moduleInfoList{i-1}.mapSize-((filterSize-1)*dilationF +1)+2*pad)/stride+1);
             end
             
-            % Ìí¼ÓBN²ã
+            % æ·»åŠ BNå±‚
             if isfield(currentModuleInfo,'batch_normalize')
                 bn_layer = batchNormalizationLayer('Name',['bn_',num2str(i)]);
                 numsNetParams = numsNetParams +numFilters*4;% offset,scale,mean,variance
@@ -141,13 +144,15 @@ for i = 1:nums_Module
             fprintf('This module No:%2d [convolutional],have #params:%-10d,FLops:%-12d,feature map size:(%3d*%3d)\n',...
                 i,numsNetParams-nums_p,FLOPs_perConv,moduleInfoList{i}.mapSize);
             
-            % Ìí¼Órelu²ã
+            % æ·»åŠ reluå±‚
             if strcmp(currentModuleInfo.activation,'relu')
                 relu_layer = reluLayer('Name',['relu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'relu6')
                 relu_layer = clippedReluLayer(6,'Name',['clipRelu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'leaky')
                 relu_layer = leakyReluLayer(0.1,'Name',['leaky_',num2str(i)]);
+            elseif strcmp(currentModuleInfo.activation,'mish')
+                relu_layer = mishLayer(['mish_',num2str(i)]);
             end
             moduleLayers = [conv_layer;bn_layer;relu_layer];
             lgraph = addLayers(lgraph,moduleLayers);
@@ -155,7 +160,7 @@ for i = 1:nums_Module
                 lastModuleNames{i-1},moduleLayers(1).Name);
         case '[shortcut]'
             moduleLayers = [];add_layer=[];relu_layer = [];
-            connectID = strip(split(currentModuleInfo.from,','));% connectIDÎªcell
+            connectID = strip(split(currentModuleInfo.from,','));% connectIDä¸ºcell
             if length(connectID)>2
                 error('unsupport more than 2 inputs');
             end
@@ -171,13 +176,15 @@ for i = 1:nums_Module
             add_layer = additionLayer(2,'Name',['add_',num2str(i)]);
             moduleInfoList{i}.channels =moduleInfoList{i-1}.channels;
             moduleInfoList{i}.mapSize = moduleInfoList{i-1}.mapSize;
-            % Ìí¼Órelu²ã
+            % æ·»åŠ reluå±‚
             if strcmp(currentModuleInfo.activation,'relu')
                 relu_layer = reluLayer('Name',['relu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'relu6')
                 relu_layer = clippedReluLayer(6,'Name',['clipRelu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'leaky')
                 relu_layer = leakyReluLayer('Name',['leaky_',num2str(i)]);
+            elseif strcmp(currentModuleInfo.activation,'mish')
+                relu_layer = mishLayer(['mish_',num2str(i)]);
             end
             moduleLayers = [add_layer;relu_layer];
             lgraph = addLayers(lgraph,moduleLayers);
@@ -188,24 +195,26 @@ for i = 1:nums_Module
         case '[route]'
             moduleLayers = [];depth_layer = [];relu_layer = [];
             connectID = strip(split(currentModuleInfo.layers,','));
-            if length(connectID)>2
-                error('unsupport more than 2 inputs');
-            end
-            if length(connectID)==1 % Ö»ÓĞÒ»¸öÁ¬½ÓµÄÊ±ºò£¬ÁíÒ»¸ö²»ÊÇÄ¬ÈÏÉÏÒ»²ã£¬Óëshortcut²ãµ¥¸öÖµ²»Í¬,´ËÊ±Îªempty Layer
+            numberCon = length(connectID);
+            if numberCon==1 % åªæœ‰ä¸€ä¸ªè¿æ¥çš„æ—¶å€™ï¼Œå¦ä¸€ä¸ªä¸æ˜¯é»˜è®¤ä¸Šä¸€å±‚ï¼Œä¸shortcutå±‚å•ä¸ªå€¼ä¸åŒ,æ­¤æ—¶ä¸ºempty Layer
                 temp = str2double(connectID);
                 module_idx = getModuleIdx(i,temp);
-                depth_layer = empty2dLayer(['empty_',num2str(i)]);
+                depth_layer = empty2dLayer(['empty_',num2str(i)],module_idx-2);
                 moduleInfoList{i}.channels = moduleInfoList{module_idx}.channels;
                 moduleInfoList{i}.mapSize = moduleInfoList{module_idx}.mapSize;
-            else % ´ËÊ±ÎªdepthConcatenation Layer
-                temp1 = str2double(connectID(1));temp2 = str2double(connectID(2));
-                module_idx1 = getModuleIdx(i,temp1);
-                module_idx2 = getModuleIdx(i,temp2);
-                depth_layer = depthConcatenationLayer(2,'Name',['concat_',num2str(i)]);
-                moduleInfoList{i}.channels = moduleInfoList{module_idx1}.channels+moduleInfoList{module_idx2}.channels;
-                moduleInfoList{i}.mapSize = moduleInfoList{module_idx1}.mapSize;
+            else % æ­¤æ—¶ä¸ºdepthConcatenation Layer
+                depth_layer = depthConcatenationLayer(numberCon,'Name',['concat_',num2str(i)]);
+                module_idx = ones(numberCon,1);
+                channels_add = zeros(numberCon,1);
+                for routeii = 1:numberCon
+                    temp = str2double(connectID(routeii));
+                    module_idx(routeii) = getModuleIdx(i,temp);
+                    channels_add(routeii) = moduleInfoList{module_idx(routeii)}.channels;
+                end
+                moduleInfoList{i}.channels = sum(channels_add);
+                moduleInfoList{i}.mapSize = moduleInfoList{module_idx(1)}.mapSize;
             end
-            % Ìí¼Órelu²ã
+            % æ·»åŠ reluå±‚
             if isfield(currentModuleInfo,'activation')
                 if strcmp(currentModuleInfo.activation,'relu')
                     relu_layer = reluLayer('Name',['relu_',num2str(i)]);
@@ -218,26 +227,26 @@ for i = 1:nums_Module
             
             moduleLayers = [depth_layer;relu_layer];
             lgraph = addLayers(lgraph,moduleLayers);
-            if length(connectID) == 1
+            if numberCon == 1
                 lgraph = connectLayers(lgraph,...
                     lastModuleNames{module_idx},moduleLayers(1).Name);
             else
-                lgraph = connectLayers(lgraph,...
-                    lastModuleNames{module_idx1},[moduleLayers(1).Name,'/in1']);
-                lgraph = connectLayers(lgraph,...
-                    lastModuleNames{module_idx2},[moduleLayers(1).Name,'/in2']);
+                for routeii = 1:numberCon
+                     lgraph = connectLayers(lgraph,...
+                    lastModuleNames{module_idx(routeii)},[moduleLayers(1).Name,'/in',num2str(routeii)]);
+                end
             end
         case '[avgpool]'
             moduleLayers = [];avg_layer = [];
             poolsize = moduleInfoList{i-1}.mapSize;
             pad =0;stride=1;
-            if isempty(currentModuleInfo) % Îª¿ÕÊ±ºò£¬×Ô¶¯ÍÆ¶Ï´óĞ¡,¼´ÎªÉÏÒ»²ãÌØÕ÷Í¼´óĞ¡
+            if isempty(currentModuleInfo) % ä¸ºç©ºæ—¶å€™ï¼Œè‡ªåŠ¨æ¨æ–­å¤§å°,å³ä¸ºä¸Šä¸€å±‚ç‰¹å¾å›¾å¤§å°
                 avg_layer = averagePooling2dLayer(poolsize,'Padding',pad,...
                     'Stride',stride,'Name',['avgPool_',num2str(i)]);
             else
                 poolsize = str2double(currentModuleInfo.size);
                 stride = str2double(currentModuleInfo.stride);
-                pad = 'same'; % È·±£strideÎª1Ê±ºò£¬ÌØÕ÷Í¼´óĞ¡²»±ä
+                pad = 'same'; % ç¡®ä¿strideä¸º1æ—¶å€™ï¼Œç‰¹å¾å›¾å¤§å°ä¸å˜
                  if isfield(currentModuleInfo,'padding')
                     pad = str2double(currentModuleInfo.padding);
                 end
@@ -261,13 +270,13 @@ for i = 1:nums_Module
             moduleLayers = [];maxp_layer = [];
             poolsize = moduleInfoList{i-1}.mapSize;
             pad =0;stride=1;
-            if isempty(currentModuleInfo) % Îª¿ÕÊ±ºò£¬×Ô¶¯ÍÆ¶Ï´óĞ¡,¼´ÎªÉÏÒ»²ãÌØÕ÷Í¼´óĞ¡
+            if isempty(currentModuleInfo) % ä¸ºç©ºæ—¶å€™ï¼Œè‡ªåŠ¨æ¨æ–­å¤§å°,å³ä¸ºä¸Šä¸€å±‚ç‰¹å¾å›¾å¤§å°
                 maxp_layer = maxPooling2dLayer(poolsize,'Padding',pad,...
                     'Stride',stride,'Name',['avgPool_',num2str(i)]);
             else
                 poolsize = str2double(currentModuleInfo.size);
                 stride = str2double(currentModuleInfo.stride);
-                pad = 'same'; % È·±£strideÎª1Ê±ºò£¬ÌØÕ÷Í¼´óĞ¡²»±ä
+                pad = 'same'; % ç¡®ä¿strideä¸º1æ—¶å€™ï¼Œç‰¹å¾å›¾å¤§å°ä¸å˜
                 if isfield(currentModuleInfo,'padding')
                     pad = str2double(currentModuleInfo.padding);
                 end
@@ -298,20 +307,22 @@ for i = 1:nums_Module
             lgraph = addLayers(lgraph,moduleLayers);
             lgraph = connectLayers(lgraph,...
                 lastModuleNames{i-1},moduleLayers(1).Name);
-        case '[connected]' % ÓëÆÕÍ¨¾í»ı×î´óÇø±ğÊÇÊäÈë´óĞ¡ÊÇ·ñ¹Ì¶¨£¬±£Ö¤È«Á¬½Ó²ã²ÎÊı¿É³Ë;ÆäºóÃ»ÓĞBN
+        case '[connected]' % ä¸æ™®é€šå·ç§¯æœ€å¤§åŒºåˆ«æ˜¯è¾“å…¥å¤§å°æ˜¯å¦å›ºå®šï¼Œä¿è¯å…¨è¿æ¥å±‚å‚æ•°å¯ä¹˜;å…¶åæ²¡æœ‰BN
             moduleLayers = [];connected_layer = [];relu_layer = [];
             output = str2double(currentModuleInfo.output);
             connected_layer = fullyConnectedLayer(output,'Name',['fullyCon_',num2str(i)]);
             moduleInfoList{i}.channels = output;
             moduleInfoList{i}.mapSize = [1,1];
             
-            % Ìí¼Órelu²ã
+            % æ·»åŠ reluå±‚
             if strcmp(currentModuleInfo.activation,'relu')
                 relu_layer = reluLayer('Name',['relu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'relu6')
                 relu_layer = clippedReluLayer(6,'Name',['clipRelu_',num2str(i)]);
             elseif strcmp(currentModuleInfo.activation,'leaky')
                 relu_layer = leakyReluLayer(0.1,'Name',['leaky_',num2str(i)]);
+            elseif strcmp(currentModuleInfo.activation,'mish')
+                relu_layer = mishLayer(['mish_',num2str(i)]);
             end
 
             moduleLayers= [connected_layer;relu_layer];
@@ -338,6 +349,32 @@ for i = 1:nums_Module
             lgraph = addLayers(lgraph,moduleLayers);
             lgraph = connectLayers(lgraph,...
                 lastModuleNames{i-1},moduleLayers(1).Name);
+        case '[upsample]'   % upsample2dLayer
+            moduleLayers = [];up_layer = [];
+            stride = str2double(strip(currentModuleInfo.stride));% æ•´æ•°æ ‡é‡ï¼Œä¸€èˆ¬ä¸º2
+            up_layer = upsample2dLayer(['up2d_',num2str(i)],stride);
+            moduleInfoList{i}.channels = moduleInfoList{i-1}.channels;
+            moduleInfoList{i}.mapSize = moduleInfoList{i-1}.mapSize*stride;
+            
+            moduleLayers= up_layer;
+            lgraph = addLayers(lgraph,moduleLayers);
+            lgraph = connectLayers(lgraph,...
+                lastModuleNames{i-1},moduleLayers(1).Name);
+        case '[yolo]' % yolov3Layer
+            moduleLayers = [];yolov3_layer = [];
+            allAnchors = reshape(str2double(strip(split(currentModuleInfo.anchors,','))),2,[])';%[width,height],n*2å¤§å°
+            mask = reshape(str2double(strip(split(currentModuleInfo.mask,','))),1,[])+1;% 1*må¤§å°,æ³¨æ„maskæ˜¯ä»0å¼€å§‹ï¼Œè¦åŠ 1
+            anchors = allAnchors(mask,:);% m*2å¤§å°,[w,h]
+            nClasses = str2double(currentModuleInfo.classes);
+            imageSize = imageInputSize(1:2); % [imageHeight,imageWidth]
+            yoloIndex = yoloIndex + 1;
+            yolov3_layer = yolov3Layer(['yolo_v3_id',num2str(yoloIndex)],...
+                anchors,nClasses,yoloIndex,imageSize,'default');
+            
+            moduleLayers= yolov3_layer;
+            lgraph = addLayers(lgraph,moduleLayers);
+            lgraph = connectLayers(lgraph,...
+                lastModuleNames{i-1},moduleLayers(1).Name);
         otherwise
             error("we currently can't support this layer: "+currentModuleType);
     end
@@ -346,14 +383,14 @@ for i = 1:nums_Module
 end
 
     function matlab_module_idx = getModuleIdx(current_matlab_ind,cfg_value)
-        % route,»òÕßshortcut²ã×ª»»ÎªÒÔ1ÎªÆğÊ¼Ë÷ÒıµÄ±êÁ¿Öµ
-        % ÊäÈë£ºcurrent_matlab_ind£¬1*1µÄÕıÕûÊı,¶ÁÈëµ½µ±Ç°²ãmoduleµÄË÷Òı±êÁ¿(current_matlab_indÖĞÊÇÒÔ[net]ÒÔ1ÎªÆğÊ¼Öµ),darknetÊÇÒÔµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0¿ªÊ¼µÄ¼ÆÊıµÄË÷Òı
-        %      cfg_value£¬1*1µÄÕûÊı£¬shortcut²ãµÄfromÖµ»òÕßrouteµÄlayersµÄÄ³Ò»¸öÖµ
-        % Êä³ö£ºmodule_idx£¬Á¬½Óµ½ÉÏÒ»²ãmoduleµÄË÷ÒıÖµ£¨ÕıÕûÊı,ÒÔ[net]ÎªÆğÊ¼Ë÷Òı1£©
+        % route,æˆ–è€…shortcutå±‚è½¬æ¢ä¸ºä»¥1ä¸ºèµ·å§‹ç´¢å¼•çš„æ ‡é‡å€¼
+        % è¾“å…¥ï¼šcurrent_matlab_indï¼Œ1*1çš„æ­£æ•´æ•°,è¯»å…¥åˆ°å½“å‰å±‚moduleçš„ç´¢å¼•æ ‡é‡(current_matlab_indä¸­æ˜¯ä»¥[net]ä»¥1ä¸ºèµ·å§‹å€¼),darknetæ˜¯ä»¥ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°çš„ç´¢å¼•
+        %      cfg_valueï¼Œ1*1çš„æ•´æ•°ï¼Œshortcutå±‚çš„fromå€¼æˆ–è€…routeçš„layersçš„æŸä¸€ä¸ªå€¼
+        % è¾“å‡ºï¼šmodule_idxï¼Œè¿æ¥åˆ°ä¸Šä¸€å±‚moduleçš„ç´¢å¼•å€¼ï¼ˆæ­£æ•´æ•°,ä»¥[net]ä¸ºèµ·å§‹ç´¢å¼•1ï¼‰
         %
         % cuixingxing150@gmail.com
         % 2019.8.19
-        % 2019.9.4ĞŞ¸ÄË÷Òı
+        % 2019.9.4ä¿®æ”¹ç´¢å¼•
         if cfg_value<0
             matlab_module_idx = current_matlab_ind+cfg_value;
         else

@@ -1,32 +1,35 @@
 function exportDarkNetNetwork(net,hyperParams,cfgfileName,weightfileName,varargin)
-% EXPORTDARKETNetNetwork ¹¦ÄÜ£º°ÑmatlabÉî¶ÈÑ§Ï°Ä£ĞÍµ¼³öÎªdarknetµÄÄ£ĞÍweightsÎÄ¼ş
-% ÊäÈë£ºnet£¬ matlabÉî¶ÈÑ§Ï°Ä£ĞÍ£¬Ä¿Ç°½öÖ»Ö§³Öseries network
-%      hyperParams,½á¹¹Ìå£¬³¬²ÎÅäÖÃÎÄ¼ş
-%      varargin µÄcutoffModule,(¿ÉÑ¡Ïî)1*1µÄÕıÕûÊı£¬Ö¸¶¨µ¼³ödarknetÇ°cutoffModule¸ömodule¡£ÒÔcfgÎÄ¼şÖĞµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0¿ªÊ¼µÄ¼ÆÊı£¬Ã»ÓĞ¸ÃÏîÔòµ¼³öÕû¸öÍøÂç
-% Êä³ö£º
-%      cfgfile, Ö¸¶¨µÄcfgºó×ºµÄÄ£ĞÍÃèÊöÎÄ¼ş
-%      weightfile,ÖÆ¶¨¶ÔÓ¦µÄweightsÈ¨ÖØÎÄ¼ş
+% EXPORTDARKETNetNetwork åŠŸèƒ½ï¼šæŠŠmatlabæ·±åº¦å­¦ä¹ æ¨¡å‹å¯¼å‡ºä¸ºdarknetçš„æ¨¡å‹weightsæ–‡ä»¶
+% è¾“å…¥ï¼šnetï¼Œ matlabæ·±åº¦å­¦ä¹ æ¨¡å‹
+%      hyperParams,ç»“æ„ä½“ï¼Œè¶…å‚é…ç½®æ–‡ä»¶
+%      varargin çš„cutoffModule,(å¯é€‰é¡¹)1*1çš„æ­£æ•´æ•°ï¼ŒæŒ‡å®šå¯¼å‡ºdarknetå‰cutoffModuleä¸ªmoduleã€‚ä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°ï¼Œæ²¡æœ‰è¯¥é¡¹åˆ™å¯¼å‡ºæ•´ä¸ªç½‘ç»œ
+% è¾“å‡ºï¼š
+%      cfgfile, æŒ‡å®šçš„cfgåç¼€çš„æ¨¡å‹æè¿°æ–‡ä»¶
+%      weightfile,åˆ¶å®šå¯¹åº”çš„weightsæƒé‡æ–‡ä»¶
 %
-% ×¢Òâ£º1¡¢relu6ÓÃrelu¼¤»îº¯Êı´úÌæ£¬ÒòÎªclip relu²»ÖªµÀdarknetÊÇ·ñÊµÏÖ
-%      2¡¢matlabÖĞmoduleÒÔ[net]Îª1¿ªÊ¼¼ÆÊı£¬¶ødarknetÖĞcfgÒÔ[convolutional]µÚÒ»¸öÎª0¿ªÊ¼¼ÆÊı
-%      3¡¢Ò»¸ömoduleÎª²»ÊÇÒÔBN,Activation¿ªÊ¼µÄ²ã
+% æ³¨æ„ï¼š1ã€relu6ç”¨reluæ¿€æ´»å‡½æ•°ä»£æ›¿ï¼Œå› ä¸ºclip reluä¸çŸ¥é“darknetæ˜¯å¦å®ç°
+%      2ã€matlabä¸­moduleä»¥[net]ä¸º1å¼€å§‹è®¡æ•°ï¼Œè€Œdarknetä¸­cfgä»¥[convolutional]ç¬¬ä¸€ä¸ªä¸º0å¼€å§‹è®¡æ•°
+%      3ã€ä¸€ä¸ªmoduleä¸ºä¸æ˜¯ä»¥BN,Activationå¼€å§‹çš„å±‚
+%      4ã€å¯¼å‡ºçš„cfgæ–‡ä»¶ä¸­çš„[yolo]å±‚æ‰‹åŠ¨ä¿®æ”¹åæ‰å¯ä»¥ä½¿ç”¨ï¼ï¼ï¼
 % cuixingxing150@gmail.com
 % 2019.8.22
-% 2019.8.29ĞŞ¸Ä£¬Ö§³Öµ¼³örelu6
-% 2019.9.4ĞŞ¸Ä£¬ÓÉÔ­À´µÄdarknetÖĞ[net]Îª0¿ªÊ¼µÄË÷Òı¸ÄÎªÒÔcfgÎÄ¼şÖĞµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0¿ªÊ¼µÄ¼ÆÊıµÄË÷Òı
+% 2019.8.29ä¿®æ”¹ï¼Œæ”¯æŒå¯¼å‡ºrelu6
+% 2019.9.4ä¿®æ”¹ï¼Œç”±åŸæ¥çš„darknetä¸­[net]ä¸º0å¼€å§‹çš„ç´¢å¼•æ”¹ä¸ºä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°çš„ç´¢å¼•
+% 2020.4.28ä¿®æ”¹ï¼ŒåŠ å…¥[yolo]ã€[upsample]ã€[route]æ”¯æŒ
+% 2020.4.29åŠ å…¥mishLayerå¯¼å‡ºå±‚æ”¯æŒ
 %
 minArgs=4;
 maxArgs=5;
 narginchk(minArgs,maxArgs)
 
 %% init
-moduleTypeList = []; % cell array,Ã¿¸öcell´æ´¢×Ö·ûÏòÁ¿µÄÄ£¿éÀàĞÍ£¬Èç'[convolutional]'
-moduleInfoList = []; % cell array,Ã¿¸öcell´æ´¢½á¹¹Í¼µÄÄ£¿éĞÅÏ¢
-layerToModuleIndex = []; % ÕıÕûÊın*1µÄvector,Ã¿¸öÖµ´ú±ímatlabÖĞ´ÓlayersÓ³Éäµ½moduleµÄÀà±ğ
+moduleTypeList = []; % cell array,æ¯ä¸ªcellå­˜å‚¨å­—ç¬¦å‘é‡çš„æ¨¡å—ç±»å‹ï¼Œå¦‚'[convolutional]'
+moduleInfoList = []; % cell array,æ¯ä¸ªcellå­˜å‚¨ç»“æ„å›¾çš„æ¨¡å—ä¿¡æ¯
+layerToModuleIndex = []; % æ­£æ•´æ•°n*1çš„vector,æ¯ä¸ªå€¼ä»£è¡¨matlabä¸­ä»layersæ˜ å°„åˆ°moduleçš„ç±»åˆ«
 
-%% 1¡¢½âÎönetÖĞÄ£¿é
+%% 1ã€è§£ænetä¸­æ¨¡å—
 module_idx = 1;
-layerNames = [];% ×Ö·ûÏòÁ¿n*1µÄvector,Ã¿¸öÖµ´æ´¢Ã¿¸ö²ãµÄÃû×Ö£¬ºóÃæshortcut,routeÒªÓÃµ½
+layerNames = [];% å­—ç¬¦å‘é‡n*1çš„vector,æ¯ä¸ªå€¼å­˜å‚¨æ¯ä¸ªå±‚çš„åå­—ï¼Œåé¢shortcut,routeè¦ç”¨åˆ°
 numsLayers = length(net.Layers);
 for i = 1:numsLayers
     is_new_module = true;st = struct();
@@ -69,18 +72,22 @@ for i = 1:numsLayers
         module_idx = module_idx-1;
         moduleInfoList{end}.activation = 'leaky';
         is_new_module = false;
-    elseif strcmpi(currentLayerType,'nnet.onnx.layer.ClipLayer')%µ±×÷ãĞÖµÎª6µ¼³ö
+    elseif strcmpi(currentLayerType,'mishLayer') % 2020.4.29æ–°åŠ å…¥
         module_idx = module_idx-1;
-        moduleInfoList{end}.activation = 'relu6'; %Êµ¼ÊÉÏÀàËÆÓÚmatlabµÄclippedReluLayer,6
+        moduleInfoList{end}.activation = 'mish';
         is_new_module = false;
-    elseif strcmpi(currentLayerType,'nnet.cnn.layer.ClippedReLULayer') %µ±×÷ãĞÖµÎª6µ¼³ö
+    elseif strcmpi(currentLayerType,'nnet.onnx.layer.ClipLayer')%å½“ä½œé˜ˆå€¼ä¸º6å¯¼å‡º
         module_idx = module_idx-1;
-        moduleInfoList{end}.activation = 'relu6'; %Êµ¼ÊÉÏÀàËÆÓÚmatlabµÄclippedReluLayer,6
+        moduleInfoList{end}.activation = 'relu6'; %å®é™…ä¸Šç±»ä¼¼äºmatlabçš„clippedReluLayer,6
+        is_new_module = false;
+    elseif strcmpi(currentLayerType,'nnet.cnn.layer.ClippedReLULayer') %å½“ä½œé˜ˆå€¼ä¸º6å¯¼å‡º
+        module_idx = module_idx-1;
+        moduleInfoList{end}.activation = 'relu6'; %å®é™…ä¸Šç±»ä¼¼äºmatlabçš„clippedReluLayer,6
         is_new_module = false;
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.MaxPooling2DLayer')
         moduleTypeList = [moduleTypeList;{'[maxpool]'}];
         layer = net.Layers(i);
-        if i==numsLayers-3||i==numsLayers-2 % ×îºóÒ»²ã£¬Áô×÷×Ô¶¯ÍÆ¶ÏÌØÕ÷Í¼´óĞ¡
+        if i==numsLayers-3||i==numsLayers-2 % æœ€åä¸€å±‚ï¼Œç•™ä½œè‡ªåŠ¨æ¨æ–­ç‰¹å¾å›¾å¤§å°
             st = struct();
         else
             if strcmp(layer.PaddingMode,'manual')
@@ -95,7 +102,7 @@ for i = 1:numsLayers
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.AveragePooling2DLayer')
         moduleTypeList = [moduleTypeList;{'[avgpool]'}];
         layer = net.Layers(i);
-        if i==numsLayers-3||i==numsLayers-2% ×îºóÒ»²ã£¬Áô×÷×Ô¶¯ÍÆ¶ÏÌØÕ÷Í¼´óĞ¡
+        if i==numsLayers-3||i==numsLayers-2% æœ€åä¸€å±‚ï¼Œç•™ä½œè‡ªåŠ¨æ¨æ–­ç‰¹å¾å›¾å¤§å°
             st = struct();
         else
             if strcmp(layer.PaddingMode,'manual')
@@ -117,35 +124,48 @@ for i = 1:numsLayers
         index_Dlogical = startsWith(net.Connections.Destination,[layer_name,'/']);
         source = net.Connections.Source(index_Dlogical);
         index_Slogical = contains(layerNames(1:end-1),source);
-        st.from = layerToModuleIndex(index_Slogical)-2; % -2 darknet module ÊÇÒÔµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0µÄ¼ÆÊı
-        st.from = num2str(min(st.from)); % 2019.8.29ĞŞ¸Ä
+        st.from = layerToModuleIndex(index_Slogical)-2; % -2 darknet module æ˜¯ä»¥ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0çš„è®¡æ•°
+        st.from = num2str(min(st.from)); % 2019.8.29ä¿®æ”¹
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.DepthConcatenationLayer')
         moduleTypeList = [moduleTypeList;{'[route]'}];
         st = struct('layers',[]);
         layer_name = layerNames{i};
         index_Dlogical = startsWith(net.Connections.Destination,[layer_name,'/']);
         source = net.Connections.Source(index_Dlogical);
-        index_Slogical = contains(layerNames(1:end-1),source);
-        st.layers = layerToModuleIndex(index_Slogical)-2; % -2 darknet module ÊÇÒÔµÚÒ»¸ö·Ç[net]¿ªÊ¼µÄmoduleÎª0µÄ¼ÆÊı
+        index_Slogical = ismember(layerNames(1:end-1),source); % 2020.4.29æ—¥containsæ”¹ä¸ºismember
+        st.layers = layerToModuleIndex(index_Slogical)-2; % -2 darknet module æ˜¯ä»¥ç¬¬ä¸€ä¸ªé[net]å¼€å§‹çš„moduleä¸º0çš„è®¡æ•°
         st.layers = join(string(st.layers),',');
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.DropoutLayer')
         moduleTypeList = [moduleTypeList;{'[dropout]'}];
         layer = net.Layers(i);
         st = struct('probability',layer.Probability);
+    elseif strcmpi(currentLayerType,'upsample2dLayer')
+        moduleTypeList = [moduleTypeList;{'[upsample]'}];
+        layer = net.Layers(i);
+        st = struct('stride',layer.size);
+    elseif strcmpi(currentLayerType,'empty2dLayer')
+         moduleTypeList = [moduleTypeList;{'[route]'}];
+        layer = net.Layers(i);
+        st = struct('layers',[]);
+        st.layers = layer.connectID; 
+    elseif strcmpi(currentLayerType,'yoloV3Layer')
+        moduleTypeList = [moduleTypeList;{'[yolo]'}];
+        st = struct('error',['we have support this type:',currentLayerType,...
+            ',but you must manully modify it!']);
     elseif strcmpi(currentLayerType, 'nnet.cnn.layer.ClassificationOutputLayer')
         continue;
     else
-        moduleTypeList = [moduleTypeList;{'[unknow]'}];% ÕâÀïĞèÒªÊÖ¶¯ÔÚcfgÎÄ¼şÖĞĞŞ¸Ä
+        moduleTypeList = [moduleTypeList;{'[unknow]'}];% è¿™é‡Œéœ€è¦æ‰‹åŠ¨åœ¨cfgæ–‡ä»¶ä¸­ä¿®æ”¹
         st = struct('error',['unsupported this type:',currentLayerType,...
             ',you should manully modify it!']);
     end
-    % ¸üĞÂ
+    % æ›´æ–°
     if is_new_module
         moduleInfoList = [moduleInfoList;{st}];
     end
     layerToModuleIndex = [layerToModuleIndex;module_idx];
     module_idx = module_idx+1;
-end % ÖÕÖ¹½âÎö
+end % ç»ˆæ­¢è§£æ
 
 %% cutoff
 if ~isempty(varargin)
@@ -154,45 +174,45 @@ if ~isempty(varargin)
     moduleInfoList(cutoffModule+2:end) = [];
 end
 
-%% 2¡¢Ğ´ÈëcfgÄ£ĞÍÃèÊöÎÄ¼ş
+%% 2ã€å†™å…¥cfgæ¨¡å‹æè¿°æ–‡ä»¶
 assert(length(moduleTypeList)==length(moduleInfoList));
 nums_module = length(moduleTypeList);
 fid_cfg = fopen(cfgfileName,'w');
 for i = 1:nums_module
-    currentModuleType = moduleTypeList{i};% currentModuleTypeÊÇ×Ö·ûÏòÁ¿ÀàĞÍ
-    currentModuleInfo = moduleInfoList{i}; % currentModuleInfoÊÇstructÀàĞÍ
-    % Öğ¸ömodule²ÎÊıĞ´Èë
+    currentModuleType = moduleTypeList{i};% currentModuleTypeæ˜¯å­—ç¬¦å‘é‡ç±»å‹
+    currentModuleInfo = moduleInfoList{i}; % currentModuleInfoæ˜¯structç±»å‹
+    % é€ä¸ªmoduleå‚æ•°å†™å…¥
     if i==1
-        fprintf(fid_cfg,'%s\n','# This file is generated by MATLAB');% ×¢ÊÍ²¿·Ö
-        fprintf(fid_cfg,'%s\n',currentModuleType);% moduleµÄÃû×Ö
+        fprintf(fid_cfg,'%s\n','# This file is generated by MATLAB');% æ³¨é‡Šéƒ¨åˆ†
+        fprintf(fid_cfg,'%s\n',currentModuleType);% moduleçš„åå­—
     else
-        fprintf(fid_cfg,'%s\n',['# darknet module ID:',num2str(i-2)]); %cfgÖĞÕıÊ½²¿·Ö
-        fprintf(fid_cfg,'%s\n',currentModuleType);% moduleµÄÃû×Ö
+        fprintf(fid_cfg,'%s\n',['# darknet module ID:',num2str(i-2)]); %cfgä¸­æ­£å¼éƒ¨åˆ†
+        fprintf(fid_cfg,'%s\n',currentModuleType);% moduleçš„åå­—
     end
     
     fields = fieldnames(currentModuleInfo);
-    for j = 1:length(fields) %Ğ´ÈëmoduleµÄ½á¹¹ÌåĞÅÏ¢
+    for j = 1:length(fields) %å†™å…¥moduleçš„ç»“æ„ä½“ä¿¡æ¯
         fieldname = fields{j};
         fieldvalue = currentModuleInfo.(fieldname);
-        fprintf(fid_cfg,'%s=%s\n',fieldname,num2str(fieldvalue));% moduleµÄÃû×Ö
+        fprintf(fid_cfg,'%s=%s\n',fieldname,num2str(fieldvalue));% moduleçš„åå­—
     end
     fprintf(fid_cfg,'\n');
 end
 fclose(fid_cfg);
 
-%% 3¡¢±£´æweightsÈ¨ÖØ
+%% 3ã€ä¿å­˜weightsæƒé‡
 fid_weight = fopen(weightfileName,'wb');
 fwrite(fid_weight,[0,2,5],'int32');% version
 fwrite(fid_weight,0,'int64'); % number images in train
 nums_module = length(moduleTypeList);
 for module_index = 1:nums_module
-    currentModuleType = moduleTypeList{module_index};% ×Ö·ûÏòÁ¿
+    currentModuleType = moduleTypeList{module_index};% å­—ç¬¦å‘é‡
     currentModuleInfo = moduleInfoList{module_index}; % struct
     currentModule = net.Layers(module_index == layerToModuleIndex);
     if strcmp(currentModuleType,'[convolutional]')||strcmp(currentModuleType,'[connected]')
         conv_layer = currentModule(1);
-        % Èç¹û¸ÃmoduleÓĞBN£¬Ê×ÏÈ´æ´¢BNµÄ²ÎÊı
-        if isfield(currentModuleInfo,'batch_normalize') % darknetÒ»¸ö±×¶Ë£¬¶ªÆúÁËconv biasµÄ²ÎÊı
+        % å¦‚æœè¯¥moduleæœ‰BNï¼Œé¦–å…ˆå­˜å‚¨BNçš„å‚æ•°
+        if isfield(currentModuleInfo,'batch_normalize') % darknetä¸€ä¸ªå¼Šç«¯ï¼Œä¸¢å¼ƒäº†conv biasçš„å‚æ•°
             bn_layer = currentModule(2);
             bn_bias = bn_layer.Offset;
             fwrite(fid_weight,bn_bias(:),'single');
@@ -205,12 +225,12 @@ for module_index = 1:nums_module
         else
             % conv bias
             conv_bias = conv_layer.Bias;
-            conv_bias = permute(conv_bias,[2,1,3,4]);% Ö§³Ö groupedConvolution2dLayer
+            conv_bias = permute(conv_bias,[2,1,3,4]);% æ”¯æŒ groupedConvolution2dLayer
             fwrite(fid_weight,conv_bias(:),'single');
         end
         % conv weights
         conv_weights = conv_layer.Weights;
-        conv_weights = permute(conv_weights,[2,1,3,4,5]);% Ö§³Ö groupedConvolution2dLayer
+        conv_weights = permute(conv_weights,[2,1,3,4,5]);% æ”¯æŒ groupedConvolution2dLayer
         fwrite(fid_weight,conv_weights(:),'single');
     end
 end

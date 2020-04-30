@@ -1,15 +1,18 @@
 classdef empty2dLayer < nnet.layer.Layer
-    % Ö÷ÒªÏëÓÃÓÚµ¼Èëyolov3ÖÐroute²ãµÄµ¥¸öÌø²ãÁ¬½Ó
+    % ä¸»è¦æƒ³ç”¨äºŽå¯¼å…¥yolov3ä¸­routeå±‚çš„å•ä¸ªè·³å±‚è¿žæŽ¥
     % 2019.9.8
+    % 2020.4.29åŠ å…¥å±žæ€§connectIDï¼Œç”¨äºŽè¿žæŽ¥å‰é¢çš„å±‚
     properties
+        connectID %connectID æ˜¯ä»¥cfgæ–‡ä»¶ä¸­ç¬¬ä¸€ä¸ªéž[net]å¼€å§‹çš„moduleä¸º0å¼€å§‹çš„è®¡æ•°
     end
     
     methods
-        function layer = empty2dLayer(name)
+        function layer = empty2dLayer(name,con)
             layer.Name = name;
             text = ['[', num2str(1), ' ', num2str(1), '] emptyLayer '];
             layer.Description = text;
-            layer.Type = ['empty layer 2d'];
+            layer.Type = 'empty2dLayer';
+            layer.connectID= con;
         end
         
         function Z = predict(layer, X)
@@ -22,4 +25,4 @@ classdef empty2dLayer < nnet.layer.Layer
     end
 end
 %% 
-% ²Î¿¼£ºhttps://ww2.mathworks.cn/matlabcentral/fileexchange/71277-deep-learning-darknet-importer
+% å‚è€ƒï¼šhttps://ww2.mathworks.cn/matlabcentral/fileexchange/71277-deep-learning-darknet-importer

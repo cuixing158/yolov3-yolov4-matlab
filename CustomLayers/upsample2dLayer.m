@@ -1,14 +1,14 @@
 classdef upsample2dLayer < nnet.layer.Layer
     properties
-        size
+        size % 鏍囬噺锛屼竴鑸负2
     end
     
     methods
         function layer = upsample2dLayer(name, size)
             layer.Name = name;
-            text = ['[', num2str(1), ' ', num2str(1), '] upsampling for YOLOv3'];
+            text = ['[', num2str(size), ' ', num2str(size), '] upsampling for YOLOv3'];
             layer.Description = text;
-            layer.Type = ['up sampling 2d'];
+            layer.Type = 'upsample2dLayer';
             layer.size = size;
         end
         
@@ -22,5 +22,5 @@ classdef upsample2dLayer < nnet.layer.Layer
     end
 end
 %% 
-% 参考：https://ww2.mathworks.cn/matlabcentral/fileexchange/71277-deep-learning-darknet-importer
-% 官方文档：Define Custom Deep Learning Layers
+% 鍙傝�冿細https://ww2.mathworks.cn/matlabcentral/fileexchange/71277-deep-learning-darknet-importer
+% 瀹樻柟鏂囨。锛欴efine Custom Deep Learning Layers

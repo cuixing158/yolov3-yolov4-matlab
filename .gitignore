@@ -1,26 +1,9 @@
-*.o
-*.dSYM
-*.csv
-*.out
-*.pyc
+*.mat
+*.jpg
+*.png
+*.pdf
+*.asv
 *.weights
-old/
-mnist/
-data/
-caffe/
-grasp/
-images/
-opencv/
-convnet/
-decaf/
-submission/
-cfg/
-darknet
-.fuse*
 
-# OS Generated #
-.DS_Store*
-ehthumbs.db
-Icon?
-Thumbs.db
-*.swp
+!images/*.jpg
+!images/*.png
