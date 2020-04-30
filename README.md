@@ -10,6 +10,8 @@ This respository uses simplified and minimal code to reproduce the yolov3 / yolo
 4、Support darknet classification model;<br>
 5、Support all kinds of indicators such as feature map size calculation, flops calculation and so on.<br>
 These code is highly readable and more brief than other frameworks such as pytorch and tensorflow!<br>
+但是不包含各种训练数据增强tricks！
+
 
 # Requirements
 Matlab R2019b or higher,the newer the better,no other dependencies!!!
