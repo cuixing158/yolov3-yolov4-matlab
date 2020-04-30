@@ -38,6 +38,9 @@ numsNetParams = 0;FLOPs = 0;
 
 %% 解析配置cfg文件
 fid = fopen(cfgfile,'r');
+if fid == -1
+  error('Author:Function:OpenFile', 'Cannot open file: %s', cfgfile);
+end
 cfg = textscan(fid, '%s', 'Delimiter',{'   '});
 fclose(fid);
 cfg = cfg{1};

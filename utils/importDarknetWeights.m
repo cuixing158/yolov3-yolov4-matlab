@@ -32,6 +32,9 @@ assert(length(moduleTypeList)==length(moduleInfoList));
 
 %% 读取权重参数文件
 fid_w = fopen(weightsfile,'rb');
+if fid_w == -1
+  error('Author:Function:OpenFile', 'Cannot open file: %s', weightsfile);
+end
 header = fread(fid_w, 3, '*int32');
 if header(2) > 1
     header2 = fread(fid_w, 1, '*int64'); % int64占用8个字节
