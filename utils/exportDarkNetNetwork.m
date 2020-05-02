@@ -1,26 +1,29 @@
-function exportDarkNetNetwork(net,hyperParams,cfgfileName,weightfileName,varargin)
+function exportDarkNetNetwork(net,hyperParams,cfgfileName,weightfileName,cutoffModule)
 % EXPORTDARKETNetNetwork 功能：把matlab深度学习模型导出为darknet的模型weights文件
-% 输入：net， matlab深度学习模型
-%      hyperParams,结构体，超参配置文件
-%      varargin 的cutoffModule,(可选项)1*1的正整数，指定导出darknet前cutoffModule个module。以cfg文件中第一个非[net]开始的module为0开始的计数，没有该项则导出整个网络
+% 输入：net， matlab深度学习模型,SeriesNetwork,DAGNetwork,dlnetwork之一类型
+%      hyperParams,结构体，超参配置文件,对应cfg文件中的[net]参数
+%      cutoffModule,(可选项)1*1的正整数，指定导出darknet前cutoffModule个module。cutoffModule是以cfg文件中第一个[convolutional]为0开始的module计数，没有该项则导出整个网络
 % 输出：
 %      cfgfile, 指定的cfg后缀的模型描述文件
 %      weightfile,制定对应的weights权重文件
 %
 % 注意：1、relu6用relu激活函数代替，因为clip relu不知道darknet是否实现
 %      2、matlab中module以[net]为1开始计数，而darknet中cfg以[convolutional]第一个为0开始计数
-%      3、一个module为不是以BN,Activation开始的层
-%      4、导出的cfg文件中的[yolo]层手动修改后才可以使用！！！
 % cuixingxing150@gmail.com
 % 2019.8.22
 % 2019.8.29修改，支持导出relu6
 % 2019.9.4修改，由原来的darknet中[net]为0开始的索引改为以cfg文件中第一个非[net]开始的module为0开始的计数的索引
-% 2020.4.28修改，加入[yolo]、[upsample]、[route]支持
+% 2020.4.28修改，加入[yolo]、[upsample]、[route]支持;输入参数限定
 % 2020.4.29加入mishLayer导出层支持
 %
-minArgs=4;
-maxArgs=5;
-narginchk(minArgs,maxArgs)
+
+arguments
+    net (1,1)  
+    hyperParams (1,1) struct
+    cfgfileName (1,:) char
+    weightfileName (1,:) char
+    cutoffModule {mustBeNonnegative} = 0 % 默认导出所有的层
+end
 
 %% init
 moduleTypeList = []; % cell array,每个cell存储字符向量的模块类型，如'[convolutional]'
@@ -46,6 +49,9 @@ for i = 1:numsLayers
             'pad',layer.PaddingSize(1),...
             'stride',layer.Stride(1),...
             'activation','linear');
+        if layer.Stride(1) ==1 && layer.FilterSize(1)==1
+            st.pad = 1;
+        end
     elseif strcmpi(currentLayerType, 'nnet.cnn.layer.GroupedConvolution2DLayer')
         moduleTypeList = [moduleTypeList;{'[convolutional]'}];
         layer = net.Layers(i);
@@ -99,6 +105,11 @@ for i = 1:numsLayers
                     'stride',layer.Stride(1));
             end
         end
+    elseif strcmpi(currentLayerType,'nnet.cnn.layer.GlobalMaxPooling2DLayer')
+        moduleTypeList = [moduleTypeList;{'[maxpool]'}];
+        if i==numsLayers-3||i==numsLayers-2% 最后一层，留作自动推断特征图大小
+            st = struct();
+        end
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.AveragePooling2DLayer')
         moduleTypeList = [moduleTypeList;{'[avgpool]'}];
         layer = net.Layers(i);
@@ -113,6 +124,11 @@ for i = 1:numsLayers
                 st = struct('size',layer.PoolSize(1),...
                     'stride',layer.Stride(1));
             end
+        end
+    elseif strcmpi(currentLayerType,'nnet.cnn.layer.GlobalAveragePooling2DLayer')
+        moduleTypeList = [moduleTypeList;{'[avgpool]'}];
+        if i==numsLayers-3||i==numsLayers-2% 最后一层，留作自动推断特征图大小
+            st = struct();
         end
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.SoftmaxLayer')
         moduleTypeList = [moduleTypeList;{'[softmax]'}];
@@ -134,7 +150,7 @@ for i = 1:numsLayers
         source = net.Connections.Source(index_Dlogical);
         index_Slogical = ismember(layerNames(1:end-1),source); % 2020.4.29日contains改为ismember
         st.layers = layerToModuleIndex(index_Slogical)-2; % -2 darknet module 是以第一个非[net]开始的module为0的计数
-        st.layers = join(string(st.layers),',');
+        st.layers = join(string(flip(st.layers)),','); % 注意route多个层连接顺序，先连接最近的层，再连接较远的层
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.DropoutLayer')
         moduleTypeList = [moduleTypeList;{'[dropout]'}];
         layer = net.Layers(i);
@@ -150,8 +166,17 @@ for i = 1:numsLayers
         st.layers = layer.connectID; 
     elseif strcmpi(currentLayerType,'yoloV3Layer')
         moduleTypeList = [moduleTypeList;{'[yolo]'}];
-        st = struct('error',['we have support this type:',currentLayerType,...
-            ',but you must manully modify it!']);
+        layer = net.Layers(i);
+        anchors = layer.anchors';% 2*n
+        anchors = reshape(anchors(:),1,[]); % 1*m
+        st = struct('mask',join(string(layer.mask-1),','),...
+            'anchors',join(string(anchors),','),...
+            'classes',num2str(layer.classes),...
+            'num',num2str(layer.num),...
+            'jitter',num2str(layer.jitter),...
+            'ignore_thresh',num2str(layer.ignore_thresh),...
+            'truth_thresh',num2str(layer.truth_thresh),...
+            'random',num2str(layer.random));
     elseif strcmpi(currentLayerType, 'nnet.cnn.layer.ClassificationOutputLayer')
         continue;
     else
@@ -168,8 +193,7 @@ for i = 1:numsLayers
 end % 终止解析
 
 %% cutoff
-if ~isempty(varargin)
-    cutoffModule = varargin{1};
+if cutoffModule
     moduleTypeList(cutoffModule+2:end) = [];
     moduleInfoList(cutoffModule+2:end) = [];
 end
@@ -183,14 +207,19 @@ for i = 1:nums_module
     currentModuleInfo = moduleInfoList{i}; % currentModuleInfo是struct类型
     % 逐个module参数写入
     if i==1
-        fprintf(fid_cfg,'%s\n','# This file is generated by MATLAB');% 注释部分
+        fprintf(fid_cfg,'%s\n','# This file is automatically generated by MATLAB and may require you to modify it manually');% 注释部分
         fprintf(fid_cfg,'%s\n',currentModuleType);% module的名字
     else
         fprintf(fid_cfg,'%s\n',['# darknet module ID:',num2str(i-2)]); %cfg中正式部分
         fprintf(fid_cfg,'%s\n',currentModuleType);% module的名字
     end
-    
-    fields = fieldnames(currentModuleInfo);
+    if i ==64
+        disp('---')
+    end
+    fields = sort(fieldnames(currentModuleInfo));
+    if (~isempty(fields)) && contains(fields{1},'activation')
+        fields = circshift(fields,-1);% 左移一位,即移到最后
+    end
     for j = 1:length(fields) %写入module的结构体信息
         fieldname = fields{j};
         fieldvalue = currentModuleInfo.(fieldname);

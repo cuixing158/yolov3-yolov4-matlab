@@ -1,16 +1,14 @@
 function [net,hyperParams,numsNetParams,FLOPs] = importDarknetNetwork(cfgfile,weightsfile)
-% IMPORTDARKNETNETWORK 功能：导入指定的cfgfile，weightsfile到matlab中
+% IMPORTDARKNETNETWORK
+% 功能：导入指定的cfgfile，weightsfile到matlab中，本函数适合导入darknet分类网络，yolov3/yolov4请使用importDarknetWeights函数
 % 输入：cfgfile, 指定的cfg后缀的模型描述文件
 %       weighfile, 指定的.weights后缀的二进制文件
-% 输出：net， matlab深度学习模型，目前只支持series network或者DAGnetwork
+% 输出：net， matlab深度学习模型
 %      hyperParams,结构体，超参配置文件
 %      numsReadParams,权重参数个数
 %      FLOPs， 模型计算力
 % 注意：1、适合2019b版本及以上
-%       2、leaky阈值darknet中为0.1
-%       3、如果某个module中有bn层，则conv的bias为0，因为darknet是这种存储形式
-%       4、darknet weights保存顺序依次为BN层offset,scale,mean,variance,Conv层的bias,weights
-%       5、yolov3/yolov4请使用importDarknetWeights函数，本函数适合导入darknet分类网络
+%      2、darknet weights保存顺序依次为BN层offset,scale,mean,variance,Conv层的bias,weights
 %      特征图输出output Size = (Input Size – ((Filter Size – 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
 % 参考：1、官方文档，Specify Layers of Convolutional Neural Network
 %      2、https://www.zhihu.com/question/65305385
@@ -18,6 +16,10 @@ function [net,hyperParams,numsNetParams,FLOPs] = importDarknetNetwork(cfgfile,we
 % cuixingxing150@gmail.com
 % 2019.8.19
 %
+arguments
+    cfgfile (1,:) char
+    weightsfile (1,:) char 
+end
 
 [lgraph,hyperParams,numsNetParams,FLOPs,...
     moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile);
@@ -25,6 +27,9 @@ assert(length(moduleTypeList)==length(moduleInfoList));
 
 %% 读取权重参数文件
 fid_w = fopen(weightsfile,'rb');
+if fid_w == -1
+  error('Author:Function:OpenFile', 'Cannot open file: %s', weightsfile);
+end
 header = fread(fid_w, 3, '*int32');
 if header(2) > 1
     header2 = fread(fid_w, 1, '*int64'); % int64占用8个字节

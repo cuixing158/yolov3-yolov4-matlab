@@ -1,7 +1,7 @@
 function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile,cutoffModule)
 % importDarkNetLayers 功能：把darknet的cfgfile导出为matlab的lgraph
 % 输入：cfgfile, (必选项)字符向量，指定的cfg后缀的模型描述文件名字
-%      cutoffModule,(可选项)1*1的正整数，指定导入darknet前cutoffModule个module。以cfg文件中第一个非[net]开始的module为0开始的计数，没有该项输入则导出整个网络
+%      cutoffModule,(可选项)1*1的正整数，指定导入darknet前cutoffModule个module。cutoffModule是以cfg文件中第一个[convolutional]为0开始的module计数，没有该项输入则导入整个网络
 % 输出：lgraph， matlab深度学习模型图
 %      hyperParams,结构体，超参配置文件
 %      numsNetParams,权重参数个数
@@ -11,10 +11,7 @@ function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,l
 %      layerToModuleIndex,
 %      n*1的向量数组，lgraph中Layers归为module的索引，从1开始，n为Layers的长度大小
 % 注意：1、适合2019b版本及以上
-%      2、leaky阈值darknet为0.1
-%      3、如果某个module中有bn层，则conv的bias为0，因为darknet是这种存储形式
-%      4、shortcut只支持输入节点数不高于2个
-%      5、darknet weights保存顺序依次为BN层offset,scale,mean,variance,Conv层的bias,weights
+%      2、shortcut只支持输入节点数不高于2个
 %      特征图输出output Size = (Input Size – ((Filter Size – 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
 % 参考：1、官方文档，Specify Layers of Convolutional Neural Network
 %      2、https://www.zhihu.com/question/65305385
@@ -195,8 +192,8 @@ for i = 1:nums_Module
                 lastModuleNames{module_idx1},[moduleLayers(1).Name,'/in1']);
             lgraph = connectLayers(lgraph,...
                 lastModuleNames{module_idx2},[moduleLayers(1).Name,'/in2']);
-        case '[route]'
-            moduleLayers = [];depth_layer = [];relu_layer = [];
+        case '[route]' 
+            moduleLayers = [];depth_layer = [];
             connectID = strip(split(currentModuleInfo.layers,','));
             numberCon = length(connectID);
             if numberCon==1 % 只有一个连接的时候，另一个不是默认上一层，与shortcut层单个值不同,此时为empty Layer
@@ -209,7 +206,7 @@ for i = 1:nums_Module
                 depth_layer = depthConcatenationLayer(numberCon,'Name',['concat_',num2str(i)]);
                 module_idx = ones(numberCon,1);
                 channels_add = zeros(numberCon,1);
-                for routeii = 1:numberCon
+                for routeii = 1:numberCon % 注意通道连接有顺序要求！不能搞反
                     temp = str2double(connectID(routeii));
                     module_idx(routeii) = getModuleIdx(i,temp);
                     channels_add(routeii) = moduleInfoList{module_idx(routeii)}.channels;
@@ -217,18 +214,8 @@ for i = 1:nums_Module
                 moduleInfoList{i}.channels = sum(channels_add);
                 moduleInfoList{i}.mapSize = moduleInfoList{module_idx(1)}.mapSize;
             end
-            % 添加relu层
-            if isfield(currentModuleInfo,'activation')
-                if strcmp(currentModuleInfo.activation,'relu')
-                    relu_layer = reluLayer('Name',['relu_',num2str(i)]);
-                elseif strcmp(currentModuleInfo.activation,'relu6')
-                    relu_layer = clippedReluLayer(6,'Name',['clipRelu_',num2str(i)]);
-                elseif strcmp(currentModuleInfo.activation,'leaky')
-                    relu_layer = leakyReluLayer('Name',['leaky_',num2str(i)]);
-                end
-            end
             
-            moduleLayers = [depth_layer;relu_layer];
+            moduleLayers = [depth_layer;];
             lgraph = addLayers(lgraph,moduleLayers);
             if numberCon == 1
                 lgraph = connectLayers(lgraph,...
@@ -367,12 +354,11 @@ for i = 1:nums_Module
             moduleLayers = [];yolov3_layer = [];
             allAnchors = reshape(str2double(strip(split(currentModuleInfo.anchors,','))),2,[])';%[width,height],n*2大小
             mask = reshape(str2double(strip(split(currentModuleInfo.mask,','))),1,[])+1;% 1*m大小,注意mask是从0开始，要加1
-            anchors = allAnchors(mask,:);% m*2大小,[w,h]
             nClasses = str2double(currentModuleInfo.classes);
             imageSize = imageInputSize(1:2); % [imageHeight,imageWidth]
             yoloIndex = yoloIndex + 1;
             yolov3_layer = yolov3Layer(['yolo_v3_id',num2str(yoloIndex)],...
-                anchors,nClasses,yoloIndex,imageSize,'default');
+                mask,allAnchors,nClasses,yoloIndex,imageSize,'default');
             
             moduleLayers= yolov3_layer;
             lgraph = addLayers(lgraph,moduleLayers);

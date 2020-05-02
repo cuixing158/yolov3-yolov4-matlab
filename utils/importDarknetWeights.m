@@ -8,9 +8,9 @@ function [lgraph,hyperParams,numsNetParams,FLOPs] = importDarknetWeights(cfgfile
 %      numsReadParams,权重参数个数
 %      FLOPs， 模型计算力
 % 注意：1、适合2019b版本及以上
-%       2、leaky阈值为0.1
+%       2、leaky阈值darknet为0.1
 %       3、如果某个module中有bn层，则conv的bias为0，因为darknet是这种存储形式
-%       4、darknet weights保存顺序依次为BN层offset,scale,mean,variance,Conv层的bias,weights
+%      4、darknet weights保存顺序依次为BN层offset,scale,mean,variance,Conv层的bias,weights
 %      特征图输出output Size = (Input Size – ((Filter Size – 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
 % 参考：1、官方文档，Specify Layers of Convolutional Neural Network
 %      2、https://www.zhihu.com/question/65305385
