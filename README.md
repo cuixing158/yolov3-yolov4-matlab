@@ -4,11 +4,13 @@
 
 # yoloV3/yolov4 matlab
 This respository uses simplified and minimal code to reproduce the yolov3 / yolov4 detection networks and darknet classification networks. The highlights are as follows:<br>
-- Support original version of darknet model；<br>
-- Support training, inference, import and export of "* .cfg", "* .weights" models；<br>
-- Support the latest [yolov3, yolov4](https://github.com/AlexeyAB/darknet) models;<br>
-- Support darknet classification model;**<br>
+- Support original version of darknet model<br>
+- Support training, inference, import and export of "* .cfg", "* .weights" models<br>
+- Support the latest [yolov3, yolov4](https://github.com/AlexeyAB/darknet) models<br>
+- Support darknet classification model<br>
 - Support all kinds of indicators such as feature map size calculation, flops calculation and so on.<br>
+
+---
 本库代码比pytorch和tensorflow等其他框架更具可读性和精简性！<br>
 These code is highly readable and more brief than other frameworks such as pytorch and tensorflow!<br>
 但是不包含各种训练数据增强tricks！<br>
