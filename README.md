@@ -17,7 +17,7 @@ These code is highly readable and more brief than other frameworks such as pytor
 But it does not contain various training data augmentation tricks!<br>
 
 # Requirements
-Matlab R2019b or higher,the newer the better,no other dependencies!!!
+Matlab R2020a or higher,the newer the better,no other dependencies!!!
 
 # How to use
 训练使用train.m,推理测试使用detect.m,demo.mlx<br>
