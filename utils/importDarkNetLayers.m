@@ -358,7 +358,7 @@ for i = 1:nums_Module
             imageSize = imageInputSize(1:2); % [imageHeight,imageWidth]
             yoloIndex = yoloIndex + 1;
             yolov3_layer = yolov3Layer(['yolo_v3_id',num2str(yoloIndex)],...
-                mask,allAnchors,nClasses,yoloIndex,imageSize,'default');
+                mask,allAnchors,nClasses,yoloIndex,imageSize);
             
             moduleLayers= yolov3_layer;
             lgraph = addLayers(lgraph,moduleLayers);

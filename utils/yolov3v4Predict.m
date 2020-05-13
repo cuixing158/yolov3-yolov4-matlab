@@ -14,6 +14,7 @@ function outPutFeatures = yolov3v4Predict(cfg_file,weight_file,image)
 % email:cuixingxing150@gmail.com
 % 2020.4.22创建
 % 2020.5.2 修改
+% 2020.5.13 minor fix
 %
 
 persistent dlnet yolovLayerArray netInputSize
@@ -73,23 +74,14 @@ for i = 1:numsYOLO
     currentFeatureMap = permute(currentFeatureMap,[5,4,1,2,3]);% bs*na*h*w*(5+nc)
     
     [~,~,yv,xv] = ndgrid(1:bs,1:na,0:h-1,0:w-1);% yv,xv大小都为bs*na*h*w，注意顺序，后面做加法维度标签要对应
-    gridXY = cat(5,xv,yv);% 第5维上扩展，大小为bs*na*h*w*2
+    gridXY = cat(5,xv,yv);% 第5维上扩展，大小为bs*na*h*w*2, x,y从1开始的索引
     currentFeatureMap(:,:,:,:,1:2) = sigmoid(currentFeatureMap(:,:,:,:,1:2)) + gridXY; % 大小为bs*na*h*w*2,预测对应xy
     anchor_grid = currentYOLOLayer.anchorsUse/currentYOLOLayer.stride; % 此处anchor_grid大小为na*2
     anchor_grid = reshape(anchor_grid,1,currentYOLOLayer.nAnchors,1,1,2);% 此处anchor_grid大小为1*na*1*1*2，方便下面相乘
     currentFeatureMap(:,:,:,:,3:4) = exp(currentFeatureMap(:,:,:,:,3:4)).*anchor_grid;% 大小为bs*na*h*w*2
-    currentFeatureMap(:,:,:,:,1:4) = currentFeatureMap(:,:,:,:,1:4)*currentYOLOLayer.stride;
-    
-    if strcmpi(currentYOLOLayer.arc,'default')
-        currentFeatureMap(:,:,:,:,5:end) = sigmoid(currentFeatureMap(:,:,:,:,5:end));
-    elseif strcmpi(currentYOLOLayer.arc,'uCE')
-        currentFeatureMap(:,:,:,:,5:end) = softmax(currentFeatureMap(:,:,:,:,5:end),'DataFormat','BUSSC');
-        currentFeatureMap(:,:,:,:,5) = 1;
-    elseif strcmpi(currentYOLOLayer.arc,'uBCE')
-        currentFeatureMap(:,:,:,:,6:end) = sigmoid(currentFeatureMap(:,:,:,:,6:end));
-        currentFeatureMap(:,:,:,:,5) = 1;
-    end
-    
+    currentFeatureMap(:,:,:,:,1:4) = currentFeatureMap(:,:,:,:,1:4)*currentYOLOLayer.stride; % 预测的bboxes
+    currentFeatureMap(:,:,:,:,5:end) = sigmoid(currentFeatureMap(:,:,:,:,5:end)); % 预测的scores
+
     if currentYOLOLayer.classes == 1
         currentFeatureMap(:,:,:,:,6) = 1;
     end
@@ -109,7 +101,7 @@ outPutFeatures(:,:,[2,4]) = outPutFeatures(:,:,[2,4])*scale(1);% y_center,height
 outPutFeatures(:,:,1) = outPutFeatures(:,:,1) -outPutFeatures(:,:,3)/2;%  x
 outPutFeatures(:,:,2) = outPutFeatures(:,:,2) -outPutFeatures(:,:,4)/2; % y
 outPutFeatures = squeeze(outPutFeatures); % 如果是单张图像检测，则输出大小为M*(5+nc)，否则是bs*M*(5+nc)
-if(existsOnGPU(outPutFeatures))
+if(canUseGPU())
     outPutFeatures = gather(outPutFeatures); % 推送到CPU上
 end
 end

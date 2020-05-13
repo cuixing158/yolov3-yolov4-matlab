@@ -1,8 +1,8 @@
 %% custom input
 addpath('./CustomLayers/','./utils/')
 % clear all % 如果更换模型，需重置静态函数(影响性能)，否则可以不用清理
-cfg_file = 'cfg/yolov3.cfg';
-weight_file = 'weights/yolov3.weights';
+cfg_file = 'cfg/yolov4.cfg';
+weight_file = 'weights/yolov4.weights';
 throushold = 0.5;
 NMS = 0.4;
 
