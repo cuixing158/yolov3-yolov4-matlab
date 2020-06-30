@@ -15,6 +15,7 @@ function exportDarkNetNetwork(net,hyperParams,cfgfileName,weightfileName,cutoffM
 % 2019.9.4修改，由原来的darknet中[net]为0开始的索引改为以cfg文件中第一个非[net]开始的module为0开始的计数的索引
 % 2020.4.28修改，加入[yolo]、[upsample]、[route]支持;输入参数限定
 % 2020.4.29加入mishLayer导出层支持
+% 2020.6.29 加入导出yolov4-tiny支持
 %
 
 arguments
@@ -46,19 +47,16 @@ for i = 1:numsLayers
         layer = net.Layers(i);
         st = struct('filters',sum(layer.NumFilters),...
             'size',layer.FilterSize(1),...
-            'pad',layer.PaddingSize(1),...
+            'pad',floor(layer.FilterSize(1)/2),...% 2020.5.7修改
             'stride',layer.Stride(1),...
             'activation','linear');
-        if layer.Stride(1) ==1 && layer.FilterSize(1)==1
-            st.pad = 1;
-        end
     elseif strcmpi(currentLayerType, 'nnet.cnn.layer.GroupedConvolution2DLayer')
         moduleTypeList = [moduleTypeList;{'[convolutional]'}];
         layer = net.Layers(i);
         st = struct('groups',layer.NumGroups,...
             'filters',layer.NumGroups*layer.NumFiltersPerGroup,...
             'size',layer.FilterSize(1),...
-            'pad',layer.PaddingSize(1),...
+            'pad',floor(layer.FilterSize(1)/2),...% 2020.5.7修改
             'stride',layer.Stride(1),...
             'activation','linear');
     elseif strcmpi(currentLayerType,'nnet.cnn.layer.FullyConnectedLayer')
@@ -164,6 +162,12 @@ for i = 1:numsLayers
         layer = net.Layers(i);
         st = struct('layers',[]);
         st.layers = layer.connectID; 
+    elseif strcmpi(currentLayerType,'sliceLayer')
+        moduleTypeList = [moduleTypeList;{'[route]'}];
+        layer = net.Layers(i);
+        st = struct('layers',layer.connectID,...
+            'groups',layer.groups,...
+            'group_id',layer.group_id-1);
     elseif strcmpi(currentLayerType,'yoloV3Layer')
         moduleTypeList = [moduleTypeList;{'[yolo]'}];
         layer = net.Layers(i);
@@ -212,9 +216,6 @@ for i = 1:nums_module
     else
         fprintf(fid_cfg,'%s\n',['# darknet module ID:',num2str(i-2)]); %cfg中正式部分
         fprintf(fid_cfg,'%s\n',currentModuleType);% module的名字
-    end
-    if i ==64
-        disp('---')
     end
     fields = sort(fieldnames(currentModuleInfo));
     if (~isempty(fields)) && contains(fields{1},'activation')

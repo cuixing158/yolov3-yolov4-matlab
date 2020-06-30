@@ -15,7 +15,6 @@ function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,l
 %      特征图输出output Size = (Input Size – ((Filter Size – 1)*Dilation Factor + 1) + 2*Padding)/Stride + 1
 % 参考：1、官方文档，Specify Layers of Convolutional Neural Network
 %      2、https://www.zhihu.com/question/65305385
-%       3、https://github.com/ultralytics/yolov3/blob/master/models.py
 % cuixingxing150@gmail.com
 % 2019.8.19
 % 2019.8.29修改，加入relu6支持
@@ -23,7 +22,7 @@ function [lgraph,hyperParams,numsNetParams,FLOPs,moduleTypeList,moduleInfoList,l
 % 2020.4.25修改函数默认输入参数，empty2dLayer加入属性
 % 2020.4.29加入[route]层上面多个层连接输入，支持darknet spp模块
 % 2020.4.29加入mish激活函数支持
-%
+% 2020.6.29加入yolov4-tiny,yolov3-tiny-prn支持
 
 arguments
     cfgfile (1,:) char
@@ -31,7 +30,7 @@ arguments
 end
 
 %% init
-numsNetParams = 0;FLOPs = 0;
+numsNetParams = 0;FLOPs = 0;nums_p = 0;FLOPs_perConv = 0;
 
 %% 解析配置cfg文件
 fid = fopen(cfgfile,'r');
@@ -141,9 +140,7 @@ for i = 1:nums_Module
             end
             FLOPs_perConv = prod(moduleInfoList{i}.mapSize)*(numsNetParams-nums_p);
             FLOPs = FLOPs+FLOPs_perConv;
-            fprintf('This module No:%2d [convolutional],have #params:%-10d,FLops:%-12d,feature map size:(%3d*%3d)\n',...
-                i,numsNetParams-nums_p,FLOPs_perConv,moduleInfoList{i}.mapSize);
-            
+
             % 添加relu层
             if strcmp(currentModuleInfo.activation,'relu')
                 relu_layer = reluLayer('Name',['relu_',num2str(i)]);
@@ -173,9 +170,16 @@ for i = 1:nums_Module
                 module_idx1 = getModuleIdx(i,temp1);
                 module_idx2 = getModuleIdx(i,temp2);
              end
-            add_layer = additionLayer(2,'Name',['add_',num2str(i)]);
-            moduleInfoList{i}.channels =moduleInfoList{i-1}.channels;
-            moduleInfoList{i}.mapSize = moduleInfoList{i-1}.mapSize;
+             if moduleInfoList{module_idx1}.channels~=moduleInfoList{module_idx2}.channels % yolov3-tiny-prn.cfg  https://github.com/WongKinYiu/PartialResidualNetworks
+                 add_layer = prnAdditionLayer(2,['prn_add_',num2str(i)]);
+                 moduleInfoList{i}.channels =min(moduleInfoList{module_idx1}.channels,... 
+                     moduleInfoList{module_idx2}.channels);
+             else
+                 add_layer = additionLayer(2,'Name',['add_',num2str(i)]);
+                 moduleInfoList{i}.channels =moduleInfoList{module_idx1}.channels;
+             end
+             moduleInfoList{i}.mapSize = moduleInfoList{module_idx1}.mapSize;
+             
             % 添加relu层
             if strcmp(currentModuleInfo.activation,'relu')
                 relu_layer = reluLayer('Name',['relu_',num2str(i)]);
@@ -196,12 +200,20 @@ for i = 1:nums_Module
             moduleLayers = [];depth_layer = [];
             connectID = strip(split(currentModuleInfo.layers,','));
             numberCon = length(connectID);
-            if numberCon==1 % 只有一个连接的时候，另一个不是默认上一层，与shortcut层单个值不同,此时为empty Layer
+            if numberCon==1 % 只有一个连接的时候，可能为empty Layer也可能为yolov4-tiny的分组通道layer，在matlab中自定义sliceLayer
                 temp = str2double(connectID);
                 module_idx = getModuleIdx(i,temp);
-                depth_layer = empty2dLayer(['empty_',num2str(i)],module_idx-2);
-                moduleInfoList{i}.channels = moduleInfoList{module_idx}.channels;
-                moduleInfoList{i}.mapSize = moduleInfoList{module_idx}.mapSize;
+                if all(isfield(currentModuleInfo,{'groups','group_id'}))
+                    numGroups = str2double(currentModuleInfo.groups);
+                    groupID = str2double(currentModuleInfo.group_id);
+                    depth_layer = sliceLayer(['slice_',num2str(i)],module_idx-2,numGroups,groupID+1);
+                    moduleInfoList{i}.channels = moduleInfoList{module_idx}.channels/numGroups;
+                    moduleInfoList{i}.mapSize = moduleInfoList{module_idx}.mapSize;
+                else % 只有一个连接的时候，并且只有'layers'关键字，另一个不是默认上一层，与shortcut层单个值不同,此时为empty Layer
+                    depth_layer = empty2dLayer(['empty_',num2str(i)],module_idx-2);
+                    moduleInfoList{i}.channels = moduleInfoList{module_idx}.channels;
+                    moduleInfoList{i}.mapSize = moduleInfoList{module_idx}.mapSize;
+                end
             else % 此时为depthConcatenation Layer
                 depth_layer = depthConcatenationLayer(numberCon,'Name',['concat_',num2str(i)]);
                 module_idx = ones(numberCon,1);
@@ -359,6 +371,8 @@ for i = 1:nums_Module
             yoloIndex = yoloIndex + 1;
             yolov3_layer = yolov3Layer(['yolo_v3_id',num2str(yoloIndex)],...
                 mask,allAnchors,nClasses,yoloIndex,imageSize);
+            moduleInfoList{i}.channels = moduleInfoList{i-1}.channels;
+            moduleInfoList{i}.mapSize = moduleInfoList{i-1}.mapSize;
             
             moduleLayers= yolov3_layer;
             lgraph = addLayers(lgraph,moduleLayers);
@@ -367,6 +381,16 @@ for i = 1:nums_Module
         otherwise
             error("we currently can't support this layer: "+currentModuleType);
     end
+    
+    if i==1
+        fprintf('This module No:%2d %-16s,have #params:%-10d,FLops:%-12d,feature map size:(%-3d*%-3d),channels in:%-12s,channels out:%-12d\n',...
+            i,currentModuleType,numsNetParams-nums_p,FLOPs_perConv,moduleInfoList{i}.mapSize, '-',moduleInfoList{i}.channels);
+    else
+        fprintf('This module No:%2d %-16s,have #params:%-10d,FLops:%-12d,feature map size:(%-3d*%-3d),channels in:%-12d,channels out:%-12d\n',...
+            i,currentModuleType,numsNetParams-nums_p,FLOPs_perConv,moduleInfoList{i}.mapSize,moduleInfoList{i-1}.channels,moduleInfoList{i}.channels);
+    end
+    nums_p=numsNetParams; 
+    FLOPs_perConv = 0;
     lastModuleNames{i} = moduleLayers(end).Name;
     layerToModuleIndex = [layerToModuleIndex;i*ones(length(moduleLayers),1)];
 end

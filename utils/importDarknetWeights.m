@@ -27,7 +27,7 @@ arguments
 end
     
 [lgraph,hyperParams,numsNetParams,FLOPs,...
-    moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile,cutoffModule);
+    moduleTypeList,moduleInfoList,layerToModuleIndex] = importDarkNetLayers(cfgfile);% only weights需要cutoff,layer都导入
 assert(length(moduleTypeList)==length(moduleInfoList));
 
 %% 读取权重参数文件
@@ -49,6 +49,9 @@ fclose(fid_w);
 % numsWeightsParams = numel(weights);
 readSize = 1;
 numsModule = length(moduleTypeList);
+if cutoffModule>0
+    numsModule = cutoffModule+1;% [net] plus 1
+end
 
 for i = 1:numsModule
     currentModuleType = moduleTypeList{i};
