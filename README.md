@@ -1,3 +1,6 @@
+This repo has been deprecated. Please see [MATLAB Deep Learning Model Hub](https://github.com/matlab-deep-learning/MATLAB-Deep-Learning-Model-Hub), which includes an implementation of [YOLOV3/V4](https://github.com/matlab-deep-learning/MATLAB-Deep-Learning-Model-Hub#object-detection-).
+---
+
 ![RUNOOB 图标](https://github.com/cuixing158/yolov3-yolov4-matlab/blob/master/images/importerExporter.png)<br>
 ![RUNOOB 图标](https://github.com/cuixing158/yolov3-yolov4-matlab/blob/master/images/yolov4Detect.jpg)<br>
 ![RUNOOB 图标](https://github.com/cuixing158/yolov3-yolov4-matlab/blob/master/images/dogYolov4Detect.jpg)<br>
